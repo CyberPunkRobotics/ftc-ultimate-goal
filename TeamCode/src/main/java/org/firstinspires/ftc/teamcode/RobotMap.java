@@ -41,7 +41,7 @@ public class RobotMap {
     public Servo ridicareShooter = null;
     public Servo servoBratStanga = null, servoBratDreapta = null;
     public CRServo rotireIntake = null;
-    public DcMotorEx encoderStanga, rotite;
+    public DcMotorEx encoderDreapta, rotite;
     public BNO055IMU imu = null;
     public RevColorSensorV3 senzorStanga, senzorDreapta;
     Orientation lastAngles = new Orientation();
@@ -53,7 +53,7 @@ public class RobotMap {
     public static PIDCoefficients pidCoefficients = new PIDCoefficients(1, 0, 0);
     ElapsedTime runtime = new ElapsedTime();
     final double COUNTS_PER_INCH = 194.04;//1440 ticks, 6cm diametru
-    public OdometryGlobalCoordinatePosition globalPositionUpdate;
+//    public OdometryGlobalCoordinatePosition globalPositionUpdate;
     public Thread positionThread;
     double coefficient = 2000;
 
@@ -71,7 +71,7 @@ public class RobotMap {
         motorIntake = hardwareMap.get(DcMotor.class, "motorIntake");
         ridicareShooter = hardwareMap.servo.get("ridicareShooter");
 //        rotireIntake = hardwareMap.crservo.get("rotireIntake");
-        encoderStanga = hardwareMap.get(DcMotorEx.class, "encoderStanga");
+        encoderDreapta = hardwareMap.get(DcMotorEx.class, "encoderStanga");
         rotite = hardwareMap.get(DcMotorEx.class, "rotite");
         servoBratDreapta = hardwareMap.get(Servo.class, "servoBratDreapta");
         servoBratStanga = hardwareMap.get(Servo.class, "servoBratStanga");
@@ -79,23 +79,23 @@ public class RobotMap {
         senzorDreapta = hardwareMap.get(RevColorSensorV3.class, "senzorSpate");
 
 
-        encoderStanga.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        encoderDreapta.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         rotite.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         motorIntake.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
-        encoderStanga.setDirection(DcMotorSimple.Direction.REVERSE);
+        encoderDreapta.setDirection(DcMotorSimple.Direction.REVERSE);
         rotite.setDirection(DcMotorSimple.Direction.REVERSE);
         motorIntake.setDirection(DcMotorSimple.Direction.REVERSE);
 
         rotite.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        encoderStanga.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        encoderDreapta.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         motorIntake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-        globalPositionUpdate = new OdometryGlobalCoordinatePosition(encoderStanga, rotite, motorIntake, COUNTS_PER_INCH, 75);
-        positionThread = new Thread(globalPositionUpdate);
-        positionThread.start();
-//        globalPositionUpdate.reverseNormalEncoder();
-        globalPositionUpdate.reverseLeftEncoder();
+//        globalPositionUpdate = new OdometryGlobalCoordinatePosition(rotite, encoderDreapta, motorIntake, imu, COUNTS_PER_INCH, 75);
+//        positionThread = new Thread(globalPositionUpdate);
+//        positionThread.start();
+////        globalPositionUpdate.reverseNormalEncoder();
+//        globalPositionUpdate.reverseLeftEncoder();
 
         servoRidicare.setPosition(0);
 
@@ -288,34 +288,35 @@ public class RobotMap {
         dreaptaFata.setDirection(DcMotorSimple.Direction.FORWARD);
     }
 
-    public void odometryDrive(double forward, double rotate) {
+    public void odometryMovement(double forward, double initialRotate) {
 
-        double frontLeftSpeed = (forward - rotate);
-        double frontRightSpeed = (-forward - rotate);
-        double backLeftSpeed = (forward - rotate);
-        double backRightSpeed = (-forward - rotate);
+        double rotate = 2* initialRotate;
+        double frontLeftSpeed = SQRT(forward - rotate);
+        double frontRightSpeed = SQRT(-forward - rotate);
+        double backLeftSpeed = SQRT(forward - rotate);
+        double backRightSpeed = SQRT(-forward - rotate);
 
         setSpeeds(frontLeftSpeed, frontRightSpeed, backLeftSpeed, backRightSpeed);
     }
 
-    public void odometryMovementTest(double power, double angle) {
-        double angle_in = Math.toRadians(angle);  // convert to robot coordinates
-
-        double delta = normalizeRadians(Math.toRadians(globalPositionUpdate.returnOrientation()) - angle_in);
-
-//        double MAX_ROTATE = 0.3; //This is to shrink how fast we can rotate so we don't fly past the angle
-//        if (y <= 0.05) {
-//            delta = 0;
-//        }
-//        else if (y < 0.5) {
-//            y /= 1.5;
-//            delta *= 0.3;
-//        }
-//        else {
-//            delta *= 0.3;
-//        }
-        odometryDrive(power, delta);
-    }
+//    public void odometryMovementTest(double power, double angle) {
+//        double angle_in = Math.toRadians(angle);  // convert to robot coordinates
+//
+//        double delta = normalizeRadians(Math.toRadians(globalPositionUpdate.returnOrientation()) - angle_in);
+//
+////        double MAX_ROTATE = 0.3; //This is to shrink how fast we can rotate so we don't fly past the angle
+////        if (y <= 0.05) {
+////            delta = 0;
+////        }
+////        else if (y < 0.5) {
+////            y /= 1.5;
+////            delta *= 0.3;
+////        }
+////        else {
+////            delta *= 0.3;
+////        }
+//        odometryDrive(power, delta);
+//    }
 
 
 
@@ -348,6 +349,16 @@ public class RobotMap {
 
     public void teleOpDrive(double forward, double rotate) {
 
+        double frontLeftSpeed = SQRT(forward - rotate);
+        double frontRightSpeed = SQRT(-forward - rotate);
+        double backLeftSpeed = SQRT(forward - rotate);
+        double backRightSpeed = SQRT(-forward - rotate);
+
+        setSpeeds(frontLeftSpeed, frontRightSpeed, backLeftSpeed, backRightSpeed);
+    }
+
+
+    public void odometryDrive(double forward, double rotate) {
         double frontLeftSpeed = SQRT(forward - rotate);
         double frontRightSpeed = SQRT(-forward - rotate);
         double backLeftSpeed = SQRT(forward - rotate);

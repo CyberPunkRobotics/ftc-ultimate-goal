@@ -28,8 +28,8 @@ public class MyOdometryOpmode extends LinearOpMode {
     public static double targetY = 0;
 
     //Hardware Map Names for drive motors and odometry wheels. THIS WILL CHANGE ON EACH ROBOT, YOU NEED TO UPDATE THESE VALUES ACCORDINGLY
-    String rfName = "dreaptaFata", rbName = "dreaptaSpate", lfName = "stangaFata", lbName = "stangaSpate";
-    String verticalLeftEncoderName = "encoderStanga", verticalRightEncoderName = "encoderDreapta", horizontalEncoderName = "motorIntake";
+//    String rfName = "dreaptaFata", rbName = "dreaptaSpate", lfName = "stangaFata", lbName = "stangaSpate";
+//    String verticalRight = "encoderStanga", verticalLeft = "encoderDreapta", horizontalEncoderName = "motorIntake";
 
     OdometryGlobalCoordinatePosition globalPositionUpdate;
 
@@ -46,26 +46,35 @@ public class MyOdometryOpmode extends LinearOpMode {
         waitForStart();
 
         //Create and start GlobalCoordinatePosition thread to constantly update the global coordinate positions
-        globalPositionUpdate = new OdometryGlobalCoordinatePosition(robot.encoderStanga, robot.rotite, robot.motorIntake, COUNTS_PER_INCH, 75);
+        globalPositionUpdate = new OdometryGlobalCoordinatePosition(robot.encoderDreapta, robot.rotite, robot.motorIntake, robot.imu, COUNTS_PER_INCH, 75);
         Thread positionThread = new Thread(globalPositionUpdate);
         positionThread.start();
 
         globalPositionUpdate.reverseLeftEncoder();
-        globalPositionUpdate.reverseNormalEncoder();
+        globalPositionUpdate.reverseRightEncoder();
+//        globalPositionUpdate.reverseNormalEncoder();
 
-        goToPosition(targetX * COUNTS_PER_INCH, targetY * COUNTS_PER_INCH, 0.4, 0, 3 * COUNTS_PER_INCH);
+//        goToPosition(targetX * COUNTS_PER_INCH, targetY * COUNTS_PER_INCH, 0.4, 0, 3 * COUNTS_PER_INCH);
 //        goToPosition(24 * COUNTS_PER_INCH, 24 * COUNTS_PER_INCH, 0.4, 0, 1);
 //        goToPosition(0 * COUNTS_PER_INCH, 0 * COUNTS_PER_INCH, 0.4, 0, 1);
 
         while (opModeIsActive()) {
+
+            double forward = -gamepad1.left_stick_y;
+            double rotation = -gamepad1.right_stick_x;
+
+            robot.teleOpDrive(forward, rotation);
+
+            double [] pose = {globalPositionUpdate.returnXCoordinate() / COUNTS_PER_INCH, globalPositionUpdate.returnYCoordinate() / COUNTS_PER_INCH, globalPositionUpdate.returnRadiansOrientation()};
+
             //Display Global (x, y, theta) coordinates
             telemetry.addData("X Position", globalPositionUpdate.returnXCoordinate() / COUNTS_PER_INCH);
             telemetry.addData("Y Position", globalPositionUpdate.returnYCoordinate() / COUNTS_PER_INCH);
             telemetry.addData("Orientation (Degrees)", globalPositionUpdate.returnOrientation());
 
-            telemetry.addData("Vertical left encoder position", robot.encoderStanga.getCurrentPosition());
-            telemetry.addData("Vertical right encoder position", robot.rotite.getCurrentPosition());
-            telemetry.addData("horizontal encoder position", robot.motorIntake.getCurrentPosition());
+            telemetry.addData("Vertical left encoder position", robot.encoderDreapta.getCurrentPosition() * globalPositionUpdate.verticalLeftEncoderPositionMultiplier);
+            telemetry.addData("Vertical right encoder position", robot.rotite.getCurrentPosition() * globalPositionUpdate.verticalRightEncoderPositionMultiplier);
+            telemetry.addData("horizontal encoder position", robot.motorIntake.getCurrentPosition() * globalPositionUpdate.normalEncoderPositionMultiplier);
 
             telemetry.addData("Thread Active", positionThread.isAlive());
             telemetry.update();
@@ -160,7 +169,7 @@ public class MyOdometryOpmode extends LinearOpMode {
             double robotMovementYComponent = calculateY(robotMovementAngle, power);
             double pivotCorrection = desiredRobotOrientation - globalPositionUpdate.returnOrientation();
 
-            robot.odometryMovementTest(power, robotMovementAngle);
+//            robot.odometryMovementTest(power, robotMovementAngle);
         }
         rotateWithOdometry(desiredRobotOrientation);
 

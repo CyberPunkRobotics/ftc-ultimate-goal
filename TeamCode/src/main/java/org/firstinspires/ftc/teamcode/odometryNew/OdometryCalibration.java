@@ -30,12 +30,12 @@ public class OdometryCalibration extends LinearOpMode {
 
     //Hardware Map Names for drive motors and odometry wheels. THIS WILL CHANGE ON EACH ROBOT, YOU NEED TO UPDATE THESE VALUES ACCORDINGLY
     String rfName = "dreaptaFata", rbName = "dreaptaSpate", lfName = "stangaFata", lbName = "stangaSpate";
-    String verticalLeftEncoderName = "encoderStanga", verticalRightEncoderName = "encoderDreapta", horizontalEncoderName = "motorIntake";
+    String verticalLeftEncoderName = "encoderStanga", verticalRightEncoderName = "rotite", horizontalEncoderName = "motorIntake";
 
-    final double PIVOT_SPEED = 0.2;
+    final double PIVOT_SPEED = 0.5;
 
     //The amount of encoder ticks for each inch the robot moves. THIS WILL CHANGE FOR EACH ROBOT AND NEEDS TO BE UPDATED HERE
-    final double COUNTS_PER_INCH = 194.22;//1440 ticks, 6cm diametru
+    final double COUNTS_PER_INCH = 194.04;//1440 ticks, 6cm diametru
 
     ElapsedTime timer = new ElapsedTime();
 
@@ -161,6 +161,9 @@ public class OdometryCalibration extends LinearOpMode {
         verticalLeft.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         verticalRight.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         horizontal.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+        verticalLeft.setDirection(DcMotorSimple.Direction.REVERSE);
+        verticalRight.setDirection(DcMotorSimple.Direction.REVERSE);
 
 
         right_front.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);

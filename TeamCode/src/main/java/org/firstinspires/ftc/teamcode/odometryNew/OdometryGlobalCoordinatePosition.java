@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.odometryNew;
 
+import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ReadWriteFile;
 
@@ -13,6 +14,7 @@ import java.io.File;
 public class OdometryGlobalCoordinatePosition implements Runnable{
     //Odometry wheels
     private DcMotor verticalEncoderLeft, verticalEncoderRight, horizontalEncoder;
+    BNO055IMU imu;
 
     //Thead run condition
     private boolean isRunning = true;
@@ -46,11 +48,12 @@ public class OdometryGlobalCoordinatePosition implements Runnable{
      * @param horizontalEncoder horizontal odometry encoder, perpendicular to the other two odometry encoder wheels
      * @param threadSleepDelay delay in milliseconds for the GlobalPositionUpdate thread (50-75 milliseconds is suggested)
      */
-    public OdometryGlobalCoordinatePosition(DcMotor verticalEncoderLeft, DcMotor verticalEncoderRight, DcMotor horizontalEncoder, double COUNTS_PER_INCH, int threadSleepDelay){
+    public OdometryGlobalCoordinatePosition(DcMotor verticalEncoderLeft, DcMotor verticalEncoderRight, DcMotor horizontalEncoder, BNO055IMU imu, double COUNTS_PER_INCH, int threadSleepDelay){
         this.verticalEncoderLeft = verticalEncoderLeft;
         this.verticalEncoderRight = verticalEncoderRight;
         this.horizontalEncoder = horizontalEncoder;
         sleepTime = threadSleepDelay;
+        this.imu = imu;
 
         robotEncoderWheelDistance = Double.parseDouble(ReadWriteFile.readFile(wheelBaseSeparationFile).trim()) * COUNTS_PER_INCH;
         this.horizontalEncoderTickPerDegreeOffset = Double.parseDouble(ReadWriteFile.readFile(horizontalTickOffsetFile).trim());
@@ -69,8 +72,10 @@ public class OdometryGlobalCoordinatePosition implements Runnable{
         double rightChange = verticalRightEncoderWheelPosition - previousVerticalRightEncoderWheelPosition;
 
         //Calculate Angle
-        changeInRobotOrientation = (leftChange - rightChange) / (robotEncoderWheelDistance);
-        robotOrientationRadians = ((robotOrientationRadians + changeInRobotOrientation));//in radians
+//        changeInRobotOrientation = (leftChange - rightChange) / (robotEncoderWheelDistance);
+//        changeInRobotOrientation = robotOrientationRadians - Math.toRadians(imu.getAngularOrientation().firstAngle);
+//        robotOrientationRadians = ((robotOrientationRadians + changeInRobotOrientation));//in radians
+        robotOrientationRadians = Math.toRadians(imu.getAngularOrientation().firstAngle);
 
         //Get the components of the motion
         normalEncoderWheelPosition = (horizontalEncoder.getCurrentPosition()*normalEncoderPositionMultiplier);
@@ -106,6 +111,10 @@ public class OdometryGlobalCoordinatePosition implements Runnable{
      * @return global orientation, in degrees
      */
     public double returnOrientation(){ return Math.toDegrees(robotOrientationRadians) % 360; }
+
+    public double returnRadiansOrientation() {
+        return robotOrientationRadians % (2*Math.PI);
+    }
 
     /**
      * Stops the position update thread

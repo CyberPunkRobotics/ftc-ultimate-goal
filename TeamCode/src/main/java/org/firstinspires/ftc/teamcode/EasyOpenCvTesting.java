@@ -29,9 +29,11 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.teamcode.odometryNew.OdometryGlobalCoordinatePosition;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
@@ -52,6 +54,9 @@ public class EasyOpenCvTesting extends LinearOpMode
     OpenCvCamera webcam;
     SkystoneDeterminationPipeline pipeline;
     private RobotMap robot;
+    private OdometryGlobalCoordinatePosition globalCoordinatePosition;
+    private final double COUNTS_PER_INCH = 194.04;
+    private ElapsedTime runtime = new ElapsedTime();
 
     /*
      * The core values which define the location and size of the sample regions
@@ -67,10 +72,182 @@ public class EasyOpenCvTesting extends LinearOpMode
     public static int FOUR_RING_THRESHOLD = 140;
     public static int ONE_RING_THRESHOLD = 131;
 
-    private final double TOWER_GOAL_HEIGHT = 0.57;
+    private final double TOWER_GOAL_HEIGHT = 0.47;
 
     private int counts = 0;
     private boolean detected = false;
+
+    private double AngleWrap(double angle) {
+
+        while (angle < Math.PI) {
+            angle += (2*Math.PI);
+        }
+        while (angle > Math.PI) {
+            angle -= (2*Math.PI);
+        }
+        return angle;
+
+    }
+
+    public void goToPosition(double x, double y, double prefferedAngle, double movementSpeed, double turnSpeed, int reverse, boolean precise, double timeout) {
+
+        double worldXPosition = globalCoordinatePosition.returnXCoordinate();
+        double worldYPosition = globalCoordinatePosition.returnYCoordinate();
+        double worldAngularOrientation = globalCoordinatePosition.returnRadiansOrientation();
+
+        double distanceToTarget = Math.hypot(x - worldXPosition, y - worldYPosition);
+
+        while (distanceToTarget > 10 && opModeIsActive()) {
+            worldXPosition = globalCoordinatePosition.returnXCoordinate() / COUNTS_PER_INCH;
+            worldYPosition = globalCoordinatePosition.returnYCoordinate() / COUNTS_PER_INCH;
+            worldAngularOrientation = globalCoordinatePosition.returnRadiansOrientation();
+
+            if (reverse == -1) {
+                worldAngularOrientation -= Math.toRadians(180);
+            }
+
+            distanceToTarget = Math.hypot(x - worldXPosition, y - worldYPosition);
+            double absoluteAngleToTarget = AngleWrap(Math.atan2(x - worldXPosition, y - worldYPosition));
+
+            double relativeAngle = AngleWrap(worldAngularOrientation - absoluteAngleToTarget);
+            double movementTurn = -Range.clip(Range.clip(relativeAngle, -1, 1) * turnSpeed, -1, 1);
+
+            if (distanceToTarget < 6) {
+                movementTurn = 0;
+            }
+
+            double movementY = Range.clip(distanceToTarget, -1, 1) * movementSpeed * reverse;
+
+            robot.odometryMovement(movementY, movementTurn);
+
+            telemetry.addData("X: ", worldXPosition);
+            telemetry.addData("Y: ", worldYPosition);
+            telemetry.addData("Orientation: ", Math.toDegrees(worldAngularOrientation));
+            telemetry.addData("Distance to target: ", distanceToTarget);
+            telemetry.addData("Absolute angle: ", Math.toDegrees(absoluteAngleToTarget));
+            telemetry.addData("Relative angle: ", Math.toDegrees(relativeAngle));
+            telemetry.addData("Rotation power: ", movementTurn);
+            telemetry.addData("Forward power: ", movementY);
+            telemetry.update();
+
+
+        }
+
+        worldAngularOrientation = globalCoordinatePosition.returnRadiansOrientation();
+        double angle = precise ? 1 : 7;
+        runtime.reset();
+        while (Math.abs(AngleWrap(worldAngularOrientation - prefferedAngle)) > Math.toRadians(angle) && opModeIsActive() && runtime.seconds() < timeout) {
+            worldAngularOrientation = globalCoordinatePosition.returnRadiansOrientation();
+
+            double relativeAngleToPoint = AngleWrap(prefferedAngle - worldAngularOrientation);
+            double movementTurn = Range.clip(relativeAngleToPoint, -1, 1);
+
+            if (!precise) {
+                movementTurn *= turnSpeed;
+            }
+            else {
+                movementTurn *= 0.065;
+            }
+
+            robot.odometryMovement(0, movementTurn);
+        }
+
+        robot.stopDriving();
+
+    }
+
+    public void pickRingsOdometry(double x, double y, double prefferedAngle, double movementSpeed, double turnSpeed, int reverse, boolean precise, double timeout) {
+
+        double worldXPosition = globalCoordinatePosition.returnXCoordinate();
+        double worldYPosition = globalCoordinatePosition.returnYCoordinate();
+        double worldAngularOrientation = globalCoordinatePosition.returnRadiansOrientation();
+
+        double distanceToTarget = Math.hypot(x - worldXPosition, y - worldYPosition);
+
+        boolean hasSlept = false;
+
+        while (distanceToTarget > 10 && opModeIsActive()) {
+            worldXPosition = globalCoordinatePosition.returnXCoordinate() / COUNTS_PER_INCH;
+            worldYPosition = globalCoordinatePosition.returnYCoordinate() / COUNTS_PER_INCH;
+            worldAngularOrientation = globalCoordinatePosition.returnRadiansOrientation();
+
+            if ((robot.senzorDreapta.getNormalizedColors().toColor() < 0 || robot.senzorStanga.getNormalizedColors().toColor() < 0) && !detected) {
+                counts ++;
+                detected = true;
+            }
+            else if (robot.senzorDreapta.getNormalizedColors().toColor() > 0 && robot.senzorStanga.getNormalizedColors().toColor() > 0) {
+                detected = false;
+            }
+
+            if (counts > 3) {
+                robot.motorIntake.setPower(0);
+                robot.rotite.setPower(-1);
+//                counts = 0;
+            }
+
+            if (reverse == -1) {
+                worldAngularOrientation -= Math.toRadians(180);
+            }
+
+            distanceToTarget = Math.hypot(x - worldXPosition, y - worldYPosition);
+            double absoluteAngleToTarget = AngleWrap(Math.atan2(x - worldXPosition, y - worldYPosition));
+
+            double relativeAngle = AngleWrap(worldAngularOrientation - absoluteAngleToTarget);
+            double movementTurn = -Range.clip(Range.clip(relativeAngle, -1, 1) * turnSpeed, -1, 1);
+
+            if (distanceToTarget < 6) {
+                movementTurn = 0;
+            }
+
+            double movementY = Range.clip(distanceToTarget, -1, 1) * movementSpeed * reverse;
+
+            if (distanceToTarget < 42 && !hasSlept) {
+                hasSlept = true;
+                robot.stopDriving();
+                sleep(850);
+            }
+
+            robot.odometryMovement(movementY, movementTurn);
+
+
+        }
+
+        worldAngularOrientation = globalCoordinatePosition.returnRadiansOrientation();
+        double angle = precise ? 2 : 7;
+        runtime.reset();
+        while (Math.abs(AngleWrap(worldAngularOrientation - prefferedAngle)) > Math.toRadians(angle) && opModeIsActive() && runtime.seconds() < timeout) {
+            worldAngularOrientation = globalCoordinatePosition.returnRadiansOrientation();
+
+            double relativeAngleToPoint = AngleWrap(prefferedAngle - worldAngularOrientation);
+            double movementTurn = Range.clip(relativeAngleToPoint, -1, 1);
+
+            if ((robot.senzorDreapta.getNormalizedColors().toColor() < 0 || robot.senzorStanga.getNormalizedColors().toColor() < 0) && !detected) {
+                counts ++;
+                detected = true;
+            }
+            else if (robot.senzorDreapta.getNormalizedColors().toColor() > 0 && robot.senzorStanga.getNormalizedColors().toColor() > 0) {
+                detected = false;
+            }
+
+            if (counts > 3) {
+                robot.motorIntake.setPower(0);
+                robot.rotite.setPower(-1);
+//                counts = 0;
+            }
+
+            if (!precise) {
+                movementTurn *= turnSpeed;
+            }
+            else {
+                movementTurn *= 0.08;
+            }
+
+            robot.odometryMovement(0, movementTurn);
+        }
+
+        robot.stopDriving();
+
+    }
 
     @Override
     public void runOpMode()
@@ -80,6 +257,13 @@ public class EasyOpenCvTesting extends LinearOpMode
         robot.ridicareShooter.setPosition(TOWER_GOAL_HEIGHT);
         robot.lansareRing.setPosition(0.5);
         robot.zeroPowerBeh();
+
+        globalCoordinatePosition = new OdometryGlobalCoordinatePosition(robot.encoderDreapta, robot.rotite, robot.motorIntake, robot.imu, COUNTS_PER_INCH, 75);
+        Thread positionThread = new Thread(globalCoordinatePosition);
+        positionThread.start();
+        globalCoordinatePosition.reverseLeftEncoder();
+        globalCoordinatePosition.reverseRightEncoder();
+        globalCoordinatePosition.reverseNormalEncoder();
 
         dashboard = FtcDashboard.getInstance();
         dashboardTelemetry = FtcDashboard.getInstance().getTelemetry();
@@ -132,7 +316,7 @@ public class EasyOpenCvTesting extends LinearOpMode
 
 
             if (pipeline.position == SkystoneDeterminationPipeline.RingPosition.FOUR) {
-                FourRings();
+                FourRingsOdometry();
             }
             else if (pipeline.position == SkystoneDeterminationPipeline.RingPosition.ONE) {
                 OneRing();
@@ -141,6 +325,48 @@ public class EasyOpenCvTesting extends LinearOpMode
                 NoRing();
             }
         }
+    }
+
+    private void FourRingsOdometry() {
+        robot.motorShooter.setPower(1);
+        robot.servoRidicare.setPosition(0.2);
+        goToPosition(0, 55, -Math.toRadians(11), 0.7, 0.3, 1, true, 1.5);
+        robot.shoot3Rings();
+        robot.motorShooter.setPower(0);
+        goToPosition(-30, 105, Math.toRadians(-40), 0.8, 0.3, 1, false, 2);
+        robot.servoWobble.setPosition(0.8);
+        robot.servoRidicare.setPosition(0);
+        sleep(500);
+        goToPosition(0, 60, -Math.toRadians(145), 0.6, 0.3, -1, true, 1.5);
+        robot.motorIntake.setPower(1);
+        robot.rotite.setPower(1);
+        robot.ridicareShooter.setPosition(1);
+//            pickRingsOdometry(-25, 5.55, Math.toRadians(145), 0.035, 0.2, 1, false, 0);
+//            sleep(300);
+        pickRingsOdometry(-36, 8, -Math.toRadians(145), 0.035, 0.2, 1, false, 0);
+        robot.servoWobble.setPosition(0);
+        sleep(750);
+        robot.servoRidicare.setPosition(0.5);
+        robot.motorShooter.setPower(1);
+        if (counts > 3) {
+            robot.rotite.setPower(-1);
+        }
+        robot.motorIntake.setPower(1);
+        robot.ridicareShooter.setPosition(TOWER_GOAL_HEIGHT);
+        goToPosition(0, 70, -Math.toRadians(11), 0.6, 0.4, -1, true, 3);
+        robot.servoRidicare.setPosition(0.2);
+        sleep(550);
+//            robot.motorIntake.setPower(1);
+        robot.shoot3Rings();
+        //oprim toate motoarele
+        robot.motorShooter.setPower(0);
+        robot.motorIntake.setPower(0);
+        robot.rotite.setPower(0);
+        goToPosition(-25, 102, Math.toRadians(-40), 0.8, 0.4, 1, false, 0);
+        robot.servoWobble.setPosition(0.8);
+        robot.servoRidicare.setPosition(0);
+        sleep(500);
+        goToPosition(0, 75, Math.toRadians(0), 1, 0.4, -1, true, 2);
     }
 
     private void pickRings(int distance, double power, double timeout) {
@@ -191,6 +417,7 @@ public class EasyOpenCvTesting extends LinearOpMode
 
             if (counts > 3) {
                 robot.motorIntake.setPower(0);
+                robot.rotite.setPower(0);
                 counts = 0;
             }
 
@@ -246,26 +473,35 @@ public class EasyOpenCvTesting extends LinearOpMode
         robot.rotate(-113, 0.4, 4);
 ////        //Se duce dupa al doilea
         robot.motorIntake.setPower(1);
+        robot.ridicareShooter.setPosition(1);
+        //robot.servoRidicare.setPosition(1);
 ////        robot.runUsingEncodersLongRun(robot.cmToTicks(100),0.35,7);
 ////        sleep(200);
 ////        robot.runUsingEncoders(robot.cmToTicks(60), 0.3, 4);
+        robot.rotite.setPower(1);
         pickRings(robot.cmToTicks(100), 0.4, 7);
         sleep(250);
         pickRings(robot.cmToTicks(60), 0.3, 4);
+
         robot.motorIntake.setPower(1);
         robot.servoWobble.setPosition(0);
         sleep(750);
         robot.motorIntake.setPower(0);
         robot.servoRidicare.setPosition(1);
+        robot.rotite.setPower(-1);
 //
         robot.runUsingEncoders(robot.cmToTicks(-30), 1, 4);
-        robot.motorIntake.setPower(1);
+        //robot.motorIntake.setPower(1);
         robot.runUsingEncodersLongRun(robot.cmToTicks(-125), 1, 5);
-        robot.motorIntake.setPower(0);
+        robot.rotite.setPower(0);
+        robot.motorIntake.setPower(1);
+        robot.ridicareShooter.setPosition(TOWER_GOAL_HEIGHT);
+        //robot.motorIntake.setPower(0);
         robot.motorShooter.setPower(1);
         robot.servoRidicare.setPosition(0);
         robot.rotate(126, 0.4, 6);//aci
         robot.shoot3Rings();
+        robot.motorIntake.setPower(0);
         robot.servoRidicare.setPosition(0.5);
         robot.motorShooter.setPower(0);
         robot.rotate(-13, 0.4, 2);
@@ -273,7 +509,7 @@ public class EasyOpenCvTesting extends LinearOpMode
         robot.servoWobble.setPosition(0.8);
         sleep(150);
 //        robot.runUsingEncodersLongRun(robot.cmToTicks(-120), 1, 5);
-        robot.runUsingEncoders(robot.cmToTicks(-80), 1, 5);
+        robot.runUsingEncoders(robot.cmToTicks(-85), 1, 5);
 
 
 
@@ -323,6 +559,7 @@ public class EasyOpenCvTesting extends LinearOpMode
 //
 //        //Se duce dupa al doilea
         robot.runUsingEncodersLongRun(robot.cmToTicks(160),0.5,7);
+        //robot.rotite.setPower(1);
 //
 //        //Prinde al doilea wobble
         robot.servoWobble.setPosition(0);
@@ -335,6 +572,7 @@ public class EasyOpenCvTesting extends LinearOpMode
 ////        //Duce al doilea wobble
         robot.runUsingEncodersLongRun(robot.cmToTicks(-170),1,7);
         robot.rotate(70, 0.4, 5);
+        //robot.rotite.setPower(0);
         robot.runUsingEncodersLongRun(robot.cmToTicks(20), 0.8, 2);
 //        robot.runUsingEncoders(robot.cmToTicks(15),1,3);
 
@@ -369,6 +607,7 @@ public class EasyOpenCvTesting extends LinearOpMode
 //        //Mers dupa al doilea wobble
         robot.runUsingEncodersLongRun(robot.cmToTicks(-100),1,2);
         robot.rotate(-112,0.35,3);
+        robot.rotite.setPower(1);
         robot.motorIntake.setPower(1);
         robot.runUsingEncodersLongRun(robot.cmToTicks(100),1,6);
         robot.runUsingEncodersLongRun(robot.cmToTicks(37), 0.5, 4);
@@ -385,6 +624,7 @@ public class EasyOpenCvTesting extends LinearOpMode
         robot.runUsingEncodersLongRun(robot.cmToTicks(-75),1,7);
 //        //Se intoarce catre patrat
         robot.rotate(127, 0.4, 5);
+        robot.rotite.setPower(0);
         robot.motorShooter.setPower(1);
         robot.motorIntake.setPower(0);
         robot.runUsingEncodersLongRun(robot.cmToTicks(70),1,7);

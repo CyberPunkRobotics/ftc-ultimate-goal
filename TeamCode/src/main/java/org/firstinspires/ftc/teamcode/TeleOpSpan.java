@@ -16,7 +16,7 @@ public class TeleOpSpan extends LinearOpMode {
     private double ridicareShooterPosition = 1;
     private final double RIDICARE_SHOOTER_SPEED = 0.001;
 
-    private final double TOWER_GOAL_HEIGHT = 0.55;
+    private final double TOWER_GOAL_HEIGHT = 0.49;
     private final double POWER_SHOT_HEIGHT = 0.71;
 
     private final double SHOOT_TIMEOUT = 350;//miliseconds
@@ -55,6 +55,7 @@ public class TeleOpSpan extends LinearOpMode {
 //        robot.rotite.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 //        robot.encoderStanga.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 //        robot.motorIntake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        robot.ridicareShooter.setPosition(TOWER_GOAL_HEIGHT);
         runtime = new ElapsedTime();
         runtime.reset();
 
