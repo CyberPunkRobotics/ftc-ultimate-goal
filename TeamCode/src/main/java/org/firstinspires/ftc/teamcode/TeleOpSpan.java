@@ -16,7 +16,7 @@ public class TeleOpSpan extends LinearOpMode {
     private double ridicareShooterPosition = 1;
     private final double RIDICARE_SHOOTER_SPEED = 0.001;
 
-    private final double TOWER_GOAL_HEIGHT = 0.49;
+    private final double TOWER_GOAL_HEIGHT = 0.42;
     private final double POWER_SHOT_HEIGHT = 0.71;
 
     private final double SHOOT_TIMEOUT = 350;//miliseconds
@@ -194,6 +194,9 @@ public class TeleOpSpan extends LinearOpMode {
                 }
                 runtime.reset();
             }
+            //reverse la rotite
+            if(gamepad1.a)
+                robot.rotite.setPower(-1);
 
         }
     }
