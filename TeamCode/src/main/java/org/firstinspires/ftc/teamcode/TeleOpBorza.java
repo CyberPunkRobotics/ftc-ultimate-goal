@@ -7,8 +7,8 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
-@TeleOp(name="TeleOp Borza")
-public class TeleOpSpan extends LinearOpMode {
+@TeleOp(name="TeleOp Borza FaraS")
+public class TeleOpBorza extends LinearOpMode {
 
     RobotMap robot;
     ElapsedTime runtime;
@@ -107,7 +107,7 @@ public class TeleOpSpan extends LinearOpMode {
             robot.teleOpDrive(forward, rotate);
 //            robot.driveFieldRelative3(leftRight, forward, rotate);
             //Shooter si intake
-            if ((gamepad1.right_bumper || gamepad2.right_bumper) && runtime.seconds() > COMMAND_DELAY){
+            if ((gamepad2.right_bumper) && runtime.seconds() > COMMAND_DELAY){
                 if (robot.motorShooter.getPower() != 0) {
                     robot.motorShooter.setPower(0);
                 }
@@ -123,7 +123,7 @@ public class TeleOpSpan extends LinearOpMode {
 //                robot.motorIntake.setPower(0);
                 runtime.reset();
             }
-            if ((gamepad1.left_bumper || gamepad2.left_bumper) && runtime.seconds() > COMMAND_DELAY){
+            if ((gamepad2.left_bumper) && runtime.seconds() > COMMAND_DELAY){
 //                robot.motorShooter.setPower(0);
                 if (robot.motorIntake.getPower() != 0 || robot.rotite.getPower() != 0) {
                     robot.motorIntake.setPower(0);
@@ -142,12 +142,12 @@ public class TeleOpSpan extends LinearOpMode {
             }
 
             //Lansare inel
-            if (gamepad1.left_trigger > 0.5) {
+            if (gamepad1.left_bumper) {
                 robot.lansareRing.setPosition(1);
                 sleep(600);
                 robot.lansareRing.setPosition(0.5);
             }
-            if (gamepad1.right_trigger == 0) {
+            else {
                 robot.lansareRing.setPosition(0.5);
             }
 

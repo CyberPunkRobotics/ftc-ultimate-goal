@@ -1,8 +1,9 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-
+@Disabled
 @TeleOp(name = "TeleOp Field Relative Daria", group="Linear Opmode")
 public class TeleOpRelativeDaria extends LinearOpMode {
     private RobotMap robot;
