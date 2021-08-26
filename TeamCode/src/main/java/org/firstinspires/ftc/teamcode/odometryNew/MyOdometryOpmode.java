@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.odometryNew;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.PIDCoefficients;
@@ -12,6 +13,7 @@ import org.firstinspires.ftc.teamcode.RobotMap;
 /**
  * Created by Sarthak on 10/4/2019.
  */
+@Disabled
 @Config
 @TeleOp(name = "My Odometry OpMode")
 public class MyOdometryOpmode extends LinearOpMode {

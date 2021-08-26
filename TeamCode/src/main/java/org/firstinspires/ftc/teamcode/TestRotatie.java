@@ -7,7 +7,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 
 @Autonomous(name="test rotatie")
-//@Disabled
+@Disabled
 public class TestRotatie extends LinearOpMode {
 
     private RobotMap robot = null;
