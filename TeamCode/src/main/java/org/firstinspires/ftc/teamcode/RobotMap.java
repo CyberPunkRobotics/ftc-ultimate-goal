@@ -288,6 +288,15 @@ public class RobotMap {
         dreaptaFata.setDirection(DcMotorSimple.Direction.FORWARD);
     }
 
+    public void mecanumMovement(double forward, double strafe, double rotate) {
+        double frontLeftSpeed = SQRT(forward + strafe - rotate);
+        double frontRightSpeed = SQRT(-forward + strafe - rotate);
+        double backLeftSpeed = SQRT(forward - strafe - rotate);
+        double backRightSpeed = SQRT(-forward - strafe - rotate);
+
+        setSpeeds(frontLeftSpeed, frontRightSpeed, backLeftSpeed, backRightSpeed);
+    }
+
     public void odometryMovement(double forward, double initialRotate) {
 
         double rotate = 2* initialRotate;

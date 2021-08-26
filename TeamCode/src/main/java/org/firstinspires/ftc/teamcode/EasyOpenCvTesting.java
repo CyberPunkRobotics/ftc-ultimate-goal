@@ -160,6 +160,60 @@ public class EasyOpenCvTesting extends LinearOpMode
 
     }
 
+    public void goToPositionMecanum(double x, double y, double prefferedAngle, double movementSpeed, double turnSpeed, int reverse, boolean precise, double timeout) {
+
+        double worldXPosition = globalCoordinatePosition.returnXCoordinate();
+        double worldYPosition = globalCoordinatePosition.returnYCoordinate();
+        double worldAngularOrientation = globalCoordinatePosition.returnRadiansOrientation();
+
+        double distanceToTarget = Math.hypot(x - worldXPosition, y - worldYPosition);
+
+        while (distanceToTarget > 10 && opModeIsActive()) {
+            worldXPosition = globalCoordinatePosition.returnXCoordinate() / COUNTS_PER_INCH;
+            worldYPosition = globalCoordinatePosition.returnYCoordinate() / COUNTS_PER_INCH;
+            worldAngularOrientation = globalCoordinatePosition.returnRadiansOrientation();
+
+            if (reverse == -1) {
+                worldAngularOrientation -= Math.toRadians(180);
+            }
+
+            distanceToTarget = Math.hypot(x - worldXPosition, y - worldYPosition);
+            double absoluteAngleToTarget = AngleWrap(Math.atan2(x - worldXPosition, y - worldYPosition));
+
+            double relativeAngle = AngleWrap(worldAngularOrientation - absoluteAngleToTarget);
+            double movementTurn = -Range.clip(Range.clip(relativeAngle, -1, 1) * turnSpeed, -1, 1);
+
+            if (distanceToTarget < 6) {
+                movementTurn = 0;
+            }
+
+            double relativeXToPoint = Math.cos(relativeAngle) * distanceToTarget;
+            double relativeYToPoint = Math.sin(relativeAngle) * distanceToTarget;
+
+            double movementXPower = relativeXToPoint / (Math.abs(relativeXToPoint) * Math.abs(relativeYToPoint));
+            double movementYPower = relativeYToPoint / (Math.abs(relativeXToPoint) * Math.abs(relativeYToPoint));
+
+            robot.mecanumMovement(movementXPower, movementYPower, 0);
+
+//            double movementY = Range.clip(distanceToTarget, -1, 1) * movementSpeed * reverse;
+
+//            robot.odometryMovement(movementY, movementTurn);
+
+            telemetry.addData("X: ", worldXPosition);
+            telemetry.addData("Y: ", worldYPosition);
+            telemetry.addData("Orientation: ", Math.toDegrees(worldAngularOrientation));
+            telemetry.addData("Distance to target: ", distanceToTarget);
+            telemetry.addData("Absolute angle: ", Math.toDegrees(absoluteAngleToTarget));
+            telemetry.addData("Relative angle: ", Math.toDegrees(relativeAngle));
+            telemetry.addData("Rotation power: ", movementTurn);
+            telemetry.addData("X power: ", movementXPower);
+            telemetry.addData("Y Power", movementYPower);
+            telemetry.update();
+
+
+        }
+    }
+
     public void pickRingsOdometry(double x, double y, double prefferedAngle, double movementSpeed, double turnSpeed, int reverse, boolean precise, double timeout) {
 
         double worldXPosition = globalCoordinatePosition.returnXCoordinate();
@@ -184,7 +238,6 @@ public class EasyOpenCvTesting extends LinearOpMode
             if (counts > 3) {
                 robot.motorIntake.setPower(0);
                 robot.rotite.setPower(0);
-//                counts = 0;
             }
 
             if (reverse == -1) {
